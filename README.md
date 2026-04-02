@@ -1,5 +1,7 @@
 # MikroTik RouterOS MCP
 
+[![CI](https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml)
+
 Public MCP server for managing multiple MikroTik RouterOS devices from one place.
 
 This repo is designed around the two things the current public MikroTik MCP options do best:
@@ -8,6 +10,10 @@ This repo is designed around the two things the current public MikroTik MCP opti
 - clean multi-device management with transport fallback
 
 The first release keeps the tool surface read-heavy and safe by default, then adds a guarded write path for raw RouterOS scripts when you explicitly opt a device into write access.
+
+## Status
+
+This is an early public release. The architecture is stable enough to extend, but the named write-tool surface is intentionally small while the safety model hardens.
 
 ## What makes this better
 
@@ -163,3 +169,10 @@ This is intentionally basic in `0.1.0`. It creates a safer MCP workflow than exp
 - add richer per-tool schemas for write operations instead of relying on raw scripts
 - add stronger change previews and rollback helpers
 - add integration tests against a lab RouterOS instance
+
+## Public repo hygiene
+
+- sample config only, no real credentials
+- CI runs on pushes and pull requests
+- `SECURITY.md` explains how to report operational vulnerabilities
+- `CONTRIBUTING.md` sets contribution expectations around safety and scope
