@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="MikroTik RouterOS MCP" width="100%">
+</p>
+
 # MikroTik RouterOS MCP
 
 [![CI](https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml)
@@ -37,6 +41,13 @@ This is an early public release. The architecture is stable enough to extend, bu
 - `nat_rules`
 - `dns_settings`
 - `dhcp_servers`
+- `dhcp_leases`
+- `address_lists`
+- `bridges`
+- `bridge_ports`
+- `neighbors`
+- `wireguard_interfaces`
+- `wireguard_peers`
 - `logs`
 - `ping`
 - `export_config`
