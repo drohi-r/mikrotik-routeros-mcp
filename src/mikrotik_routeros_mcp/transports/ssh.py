@@ -54,7 +54,10 @@ class SshTransport(BaseTransport):
 
     def print_resource(self, path: str, **params: Any) -> Any:
         args = " ".join(f"{key}={value}" for key, value in params.items())
-        command = f"{path} print detail without-paging {args}".strip()
+        if path in {"/system/resource", "/ip/dns"}:
+            command = f"{path} print {args}".strip()
+        else:
+            command = f"{path} print without-paging {args}".strip()
         result = self._run_command(command)
         if result["exit_status"] != 0:
             raise TransportError(f"ssh print failed for {path}: {result['stderr'] or result['stdout']}")

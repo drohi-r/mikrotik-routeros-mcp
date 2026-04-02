@@ -128,6 +128,60 @@ def dhcp_servers(device: str) -> str:
 
 
 @mcp.tool()
+def dhcp_leases(device: str, dynamic_only: bool = False) -> str:
+    params: dict[str, Any] = {}
+    if dynamic_only:
+        params["dynamic"] = "true"
+    response = _client().print_resource(device, "/ip/dhcp-server/lease", **params)
+    return _json(response)
+
+
+@mcp.tool()
+def address_lists(device: str, list_name: str = "") -> str:
+    params: dict[str, Any] = {}
+    if list_name:
+        params["list"] = list_name
+    response = _client().print_resource(device, "/ip/firewall/address-list", **params)
+    return _json(response)
+
+
+@mcp.tool()
+def bridges(device: str) -> str:
+    response = _client().print_resource(device, "/interface/bridge")
+    return _json(response)
+
+
+@mcp.tool()
+def bridge_ports(device: str, bridge_name: str = "") -> str:
+    params: dict[str, Any] = {}
+    if bridge_name:
+        params["bridge"] = bridge_name
+    response = _client().print_resource(device, "/interface/bridge/port", **params)
+    return _json(response)
+
+
+@mcp.tool()
+def neighbors(device: str) -> str:
+    response = _client().print_resource(device, "/ip/neighbor")
+    return _json(response)
+
+
+@mcp.tool()
+def wireguard_interfaces(device: str) -> str:
+    response = _client().print_resource(device, "/interface/wireguard")
+    return _json(response)
+
+
+@mcp.tool()
+def wireguard_peers(device: str, interface_name: str = "") -> str:
+    params: dict[str, Any] = {}
+    if interface_name:
+        params["interface"] = interface_name
+    response = _client().print_resource(device, "/interface/wireguard/peers", **params)
+    return _json(response)
+
+
+@mcp.tool()
 def logs(device: str, topics: str = "", limit: int = 50) -> str:
     params: dict[str, Any] = {}
     if topics:

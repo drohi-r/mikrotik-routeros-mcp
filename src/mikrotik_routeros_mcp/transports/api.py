@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import socket
+import ssl
 from typing import Any
 
 from ..models import DeviceConfig
@@ -36,6 +37,15 @@ class ApiTransport(BaseTransport):
         host = _resolve_host(self.device)
         port = self.device.api_ssl_port if self.use_ssl else self.device.api_port
         try:
+            ssl_context = None
+            if self.use_ssl:
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                try:
+                    ssl_context.set_ciphers("DEFAULT:@SECLEVEL=0")
+                except ssl.SSLError:
+                    pass
             return routeros_api.RouterOsApiPool(
                 host,
                 username=self.device.username,
@@ -43,7 +53,9 @@ class ApiTransport(BaseTransport):
                 port=port,
                 use_ssl=self.use_ssl,
                 plaintext_login=not self.use_ssl,
-                socket_timeout=self.device.timeout_seconds,
+                ssl_verify=False,
+                ssl_verify_hostname=False,
+                ssl_context=ssl_context,
             )
         except Exception as exc:  # pragma: no cover
             raise TransportError(f"{self.name} connection failed for {self.device.name}: {exc}") from exc
