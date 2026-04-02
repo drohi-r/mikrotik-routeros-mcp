@@ -58,7 +58,7 @@ This is an early public release. The architecture is stable enough to extend, bu
 ## Install
 
 ```bash
-cd /Users/Drohi/Projects/mikrotik-routeros-mcp
+cd mikrotik-routeros-mcp
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 ```
@@ -112,8 +112,8 @@ By default the server looks for config in this order:
 ## Run
 
 ```bash
-cd /Users/Drohi/Projects/mikrotik-routeros-mcp
-MIKROTIK_ROUTEROS_CONFIG=/Users/Drohi/Projects/mikrotik-routeros-mcp/devices.yaml \
+cd mikrotik-routeros-mcp
+MIKROTIK_ROUTEROS_CONFIG=./devices.yaml \
 .venv/bin/python -m mikrotik_routeros_mcp.server
 ```
 
@@ -123,18 +123,20 @@ MIKROTIK_ROUTEROS_CONFIG=/Users/Drohi/Projects/mikrotik-routeros-mcp/devices.yam
 {
     "mcpServers": {
     "mikrotik-routeros": {
-      "command": "/Users/Drohi/Projects/mikrotik-routeros-mcp/.venv/bin/python",
+      "command": "/path/to/mikrotik-routeros-mcp/.venv/bin/python",
       "args": [
         "-m",
         "mikrotik_routeros_mcp.server"
       ],
       "env": {
-        "MIKROTIK_ROUTEROS_CONFIG": "/Users/Drohi/Projects/mikrotik-routeros-mcp/devices.yaml"
+        "MIKROTIK_ROUTEROS_CONFIG": "/path/to/devices.yaml"
       }
     }
   }
 }
 ```
+
+> Replace `/path/to/` with the actual path where you cloned the repo.
 
 ## Cursor
 
@@ -142,18 +144,20 @@ MIKROTIK_ROUTEROS_CONFIG=/Users/Drohi/Projects/mikrotik-routeros-mcp/devices.yam
 {
     "mcpServers": {
     "mikrotik-routeros": {
-      "command": "/Users/Drohi/Projects/mikrotik-routeros-mcp/.venv/bin/python",
+      "command": "/path/to/mikrotik-routeros-mcp/.venv/bin/python",
       "args": [
         "-m",
         "mikrotik_routeros_mcp.server"
       ],
       "env": {
-        "MIKROTIK_ROUTEROS_CONFIG": "/Users/Drohi/Projects/mikrotik-routeros-mcp/devices.yaml"
+        "MIKROTIK_ROUTEROS_CONFIG": "/path/to/devices.yaml"
       }
     }
   }
 }
 ```
+
+> Replace `/path/to/` with the actual path where you cloned the repo.
 
 ## Guarded write flow
 
@@ -187,3 +191,7 @@ This is intentionally basic in `0.1.0`. It creates a safer MCP workflow than exp
 - CI runs on pushes and pull requests
 - `SECURITY.md` explains how to report operational vulnerabilities
 - `CONTRIBUTING.md` sets contribution expectations around safety and scope
+
+## License
+
+[Apache 2.0](LICENSE)
