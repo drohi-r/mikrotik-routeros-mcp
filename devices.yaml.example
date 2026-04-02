@@ -1,0 +1,31 @@
+devices:
+  - name: home
+    host: 192.168.88.1
+    username: admin
+    password: change-me
+    fallback_ip: null
+    api_port: 8728
+    api_ssl_port: 8729
+    ssh_port: 22
+    transport_order:
+      - api
+      - api-ssl
+      - ssh
+    allow_writes: false
+    tags:
+      - home
+
+  - name: office
+    host: office-router.example.com
+    username: admin
+    password: change-me
+    fallback_ip: 203.0.113.10
+    api_port: 8728
+    api_ssl_port: 8729
+    ssh_port: 22
+    transport_order:
+      - api-ssl
+      - ssh
+    allow_writes: false
+    tags:
+      - office
