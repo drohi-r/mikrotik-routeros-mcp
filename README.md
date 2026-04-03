@@ -156,6 +156,30 @@ Write access is blocked unless the target device has `allow_writes: true`. The i
 }
 ```
 
+## Codex
+
+Create a `codex.json` MCP config file:
+
+```json
+{
+  "mcpServers": {
+    "mikrotik-routeros": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/mikrotik-routeros-mcp", "python", "-m", "mikrotik_routeros_mcp.server"],
+      "env": {
+        "MIKROTIK_ROUTEROS_CONFIG": "/path/to/devices.yaml"
+      }
+    }
+  }
+}
+```
+
+Then run Codex with:
+
+```bash
+codex --mcp-config codex.json
+```
+
 ## Production safety
 
 - **Device-scoped targeting** — the model must choose a named target router explicitly. No ambient "default device" behavior.
