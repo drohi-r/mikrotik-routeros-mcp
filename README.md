@@ -59,8 +59,7 @@ This is an early public release. The architecture is stable enough to extend, bu
 
 ```bash
 cd mikrotik-routeros-mcp
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+uv sync
 ```
 
 ## Configure devices
@@ -114,17 +113,21 @@ By default the server looks for config in this order:
 ```bash
 cd mikrotik-routeros-mcp
 MIKROTIK_ROUTEROS_CONFIG=./devices.yaml \
-.venv/bin/python -m mikrotik_routeros_mcp.server
+uv run python -m mikrotik_routeros_mcp.server
 ```
 
 ## Claude Desktop
 
 ```json
 {
-    "mcpServers": {
+  "mcpServers": {
     "mikrotik-routeros": {
-      "command": "/path/to/mikrotik-routeros-mcp/.venv/bin/python",
+      "command": "uv",
       "args": [
+        "run",
+        "--directory",
+        "/path/to/mikrotik-routeros-mcp",
+        "python",
         "-m",
         "mikrotik_routeros_mcp.server"
       ],
@@ -142,10 +145,14 @@ MIKROTIK_ROUTEROS_CONFIG=./devices.yaml \
 
 ```json
 {
-    "mcpServers": {
+  "mcpServers": {
     "mikrotik-routeros": {
-      "command": "/path/to/mikrotik-routeros-mcp/.venv/bin/python",
+      "command": "uv",
       "args": [
+        "run",
+        "--directory",
+        "/path/to/mikrotik-routeros-mcp",
+        "python",
         "-m",
         "mikrotik_routeros_mcp.server"
       ],
@@ -177,6 +184,13 @@ This is intentionally basic in `0.1.0`. It creates a safer MCP workflow than exp
 - SSH fallback is especially useful for config export and environments where API access is limited.
 - `run_api_print` is read-only by design. It blocks mutating RouterOS API paths.
 - The guarded script tools are the escape hatch until more named write tools are added.
+
+## Development
+
+```bash
+uv sync
+uv run python -m pytest -v
+```
 
 ## Next steps
 
