@@ -4,73 +4,53 @@
 
 # MikroTik RouterOS MCP
 
-[![CI](https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml"><img src="https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/drohi-r/mikrotik-routeros-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License"></a>
+  <img src="https://img.shields.io/badge/Python-3.12%2B-blue?style=for-the-badge" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/MCP_Tools-24-2196F3?style=for-the-badge" alt="24 MCP Tools">
+</p>
 
-Public MCP server for managing multiple MikroTik RouterOS devices from one place.
+An MCP server for [MikroTik RouterOS](https://mikrotik.com/software). Exposes 24 tools covering multi-device management, transport fallback (API → API-SSL → SSH), read-heavy network inspection, and guarded write access — so AI assistants can manage RouterOS devices safely from a single conversation.
 
-This repo is designed around the two things the current public MikroTik MCP options do best:
-
-- broad RouterOS coverage
-- clean multi-device management with transport fallback
-
-The first release keeps the tool surface read-heavy and safe by default, then adds a guarded write path for raw RouterOS scripts when you explicitly opt a device into write access.
-
-## Status
-
-This is an early public release. The architecture is stable enough to extend, but the named write-tool surface is intentionally small while the safety model hardens.
-
-## What makes this better
-
-- Multi-device config with named routers like `home` and `office`
-- Transport fallback in order: `api`, `api-ssl`, `ssh`
-- Device-scoped tools so the model must choose a target router explicitly
-- Guarded write workflow with `plan_script_change` then `apply_script_change`
-- Readable JSON outputs instead of transport-specific ad hoc blobs
-- Public-repo structure with tests, sample config, and clear client setup
-
-## Current tools
-
-- `get_server_config`
-- `list_devices`
-- `describe_device`
-- `system_info`
-- `interfaces`
-- `ip_addresses`
-- `routes`
-- `firewall_filters`
-- `nat_rules`
-- `dns_settings`
-- `dhcp_servers`
-- `dhcp_leases`
-- `address_lists`
-- `bridges`
-- `bridge_ports`
-- `neighbors`
-- `wireguard_interfaces`
-- `wireguard_peers`
-- `logs`
-- `ping`
-- `export_config`
-- `run_api_print`
-- `plan_script_change`
-- `apply_script_change`
-
-## Install
+## Quick start
 
 ```bash
-cd mikrotik-routeros-mcp
+git clone https://github.com/drohi-r/mikrotik-routeros-mcp && cd mikrotik-routeros-mcp
 uv sync
+
+# Configure devices
+cp devices.yaml.example devices.yaml   # then edit with your router details
+
+# Run the server
+uv run python -m mikrotik_routeros_mcp.server
 ```
 
-## Configure devices
+The server looks for config in this order: `MIKROTIK_ROUTEROS_CONFIG` env var → `./devices.yaml` → `./devices.yml` → `./devices.json`.
 
-Copy the sample file and fill in your routers:
+## Architecture
 
-```bash
-cp devices.yaml.example devices.yaml
+```mermaid
+graph TD
+    A["MikroTik RouterOS MCP Server<br/><code>mikrotik_routeros_mcp</code><br/>24 tools · safety gate"] --> B
+    B["Transport Layer<br/>Fallback: API → API-SSL → SSH"] --> C
+    C["RouterOS Devices<br/>Named targets from devices.yaml"]
+
+    D["Multi-Device Config<br/>Named routers · tags · per-device write control"] -.-> A
+    E["Guarded Write Flow<br/>plan_script_change → apply_script_change"] -.-> A
+    F["SSH Fallback<br/>Config export · limited-API environments"] -.-> B
+
+    style A fill:#1a1a2e,stroke:#2196F3,color:#fff
+    style B fill:#1a1a2e,stroke:#2196F3,color:#fff
+    style C fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style D fill:#0f3460,stroke:#0f3460,color:#fff
+    style E fill:#0f3460,stroke:#0f3460,color:#fff
+    style F fill:#0f3460,stroke:#0f3460,color:#fff
 ```
 
-Example:
+## Configuration
+
+Device config example:
 
 ```yaml
 devices:
@@ -101,20 +81,48 @@ devices:
       - production
 ```
 
-By default the server looks for config in this order:
+## Tools
 
-- `MIKROTIK_ROUTEROS_CONFIG`
-- `./devices.yaml`
-- `./devices.yml`
-- `./devices.json`
+### Server and discovery
 
-## Run
+| Tool | What it does |
+|------|-------------|
+| `get_server_config` | Return current MCP server configuration and safety settings |
+| `list_devices` | List all configured RouterOS devices |
+| `describe_device` | Return detailed info for a named device |
 
-```bash
-cd mikrotik-routeros-mcp
-MIKROTIK_ROUTEROS_CONFIG=./devices.yaml \
-uv run python -m mikrotik_routeros_mcp.server
-```
+### System and network reads
+
+| Tool | What it does |
+|------|-------------|
+| `system_info` | Return system identity, version, uptime, and hardware info |
+| `interfaces` | List all network interfaces with status |
+| `ip_addresses` | List IP addresses assigned to interfaces |
+| `routes` | List the routing table |
+| `firewall_filters` | List firewall filter rules |
+| `nat_rules` | List NAT rules |
+| `dns_settings` | Return DNS configuration |
+| `dhcp_servers` | List DHCP server instances |
+| `dhcp_leases` | List DHCP leases |
+| `address_lists` | List firewall address list entries |
+| `bridges` | List bridge interfaces |
+| `bridge_ports` | List bridge port memberships |
+| `neighbors` | List discovered network neighbors |
+| `wireguard_interfaces` | List WireGuard interfaces |
+| `wireguard_peers` | List WireGuard peers |
+| `logs` | Retrieve system log entries |
+| `ping` | Ping a target from a device |
+| `export_config` | Export device configuration |
+| `run_api_print` | Read-only API print for any RouterOS path |
+
+### Guarded writes
+
+| Tool | What it does |
+|------|-------------|
+| `plan_script_change` | Preview a RouterOS script change with risk assessment |
+| `apply_script_change` | Apply a planned script change with approval code |
+
+Write access is blocked unless the target device has `allow_writes: true`. The intended workflow is: `plan_script_change` → inspect risk level and approval code → `apply_script_change` only if the plan is acceptable.
 
 ## Claude Desktop
 
@@ -123,14 +131,7 @@ uv run python -m mikrotik_routeros_mcp.server
   "mcpServers": {
     "mikrotik-routeros": {
       "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/path/to/mikrotik-routeros-mcp",
-        "python",
-        "-m",
-        "mikrotik_routeros_mcp.server"
-      ],
+      "args": ["run", "--directory", "/path/to/mikrotik-routeros-mcp", "python", "-m", "mikrotik_routeros_mcp.server"],
       "env": {
         "MIKROTIK_ROUTEROS_CONFIG": "/path/to/devices.yaml"
       }
@@ -139,23 +140,14 @@ uv run python -m mikrotik_routeros_mcp.server
 }
 ```
 
-> Replace `/path/to/` with the actual path where you cloned the repo.
-
-## Cursor
+## VS Code / Cursor
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "mikrotik-routeros": {
       "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/path/to/mikrotik-routeros-mcp",
-        "python",
-        "-m",
-        "mikrotik_routeros_mcp.server"
-      ],
+      "args": ["run", "--directory", "/path/to/mikrotik-routeros-mcp", "python", "-m", "mikrotik_routeros_mcp.server"],
       "env": {
         "MIKROTIK_ROUTEROS_CONFIG": "/path/to/devices.yaml"
       }
@@ -164,26 +156,14 @@ uv run python -m mikrotik_routeros_mcp.server
 }
 ```
 
-> Replace `/path/to/` with the actual path where you cloned the repo.
+## Production safety
 
-## Guarded write flow
-
-Write access is blocked unless the target device has `allow_writes: true`.
-
-The intended workflow is:
-
-1. Call `plan_script_change(device, script, reason)`
-2. Inspect the returned risk level and approval code
-3. Call `apply_script_change(device, script, reason, approval_code)` only if the plan is acceptable
-
-This is intentionally basic in `0.1.0`. It creates a safer MCP workflow than exposing unrestricted raw script execution immediately.
-
-## Notes
-
-- API transports return structured rows when possible.
-- SSH fallback is especially useful for config export and environments where API access is limited.
-- `run_api_print` is read-only by design. It blocks mutating RouterOS API paths.
-- The guarded script tools are the escape hatch until more named write tools are added.
+- **Device-scoped targeting** — the model must choose a named target router explicitly. No ambient "default device" behavior.
+- **Write gating** — write access is blocked per-device unless `allow_writes: true` is set in config. Read tools are always available.
+- **Guarded write flow** — `plan_script_change` returns a risk assessment and approval code. `apply_script_change` requires that approval code to proceed.
+- **Transport fallback** — attempts `api`, then `api-ssl`, then `ssh` in order, so the server connects via the best available transport without manual switching.
+- **Read-only API guard** — `run_api_print` blocks mutating RouterOS API paths by design.
+- **Input validation** — all tools validate parameters before any API call is made. Invalid inputs return structured JSON errors, never raw exceptions.
 
 ## Development
 
@@ -191,20 +171,6 @@ This is intentionally basic in `0.1.0`. It creates a safer MCP workflow than exp
 uv sync
 uv run python -m pytest -v
 ```
-
-## Next steps
-
-- add address lists, DHCP leases, interfaces, bridges, neighbors, and backups
-- add richer per-tool schemas for write operations instead of relying on raw scripts
-- add stronger change previews and rollback helpers
-- add integration tests against a lab RouterOS instance
-
-## Public repo hygiene
-
-- sample config only, no real credentials
-- CI runs on pushes and pull requests
-- `SECURITY.md` explains how to report operational vulnerabilities
-- `CONTRIBUTING.md` sets contribution expectations around safety and scope
 
 ## License
 
