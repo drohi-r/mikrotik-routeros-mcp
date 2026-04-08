@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/MCP_Tools-24-2196F3?style=for-the-badge" alt="24 MCP Tools">
 </p>
 
-An MCP server for [MikroTik RouterOS](https://mikrotik.com/software). Exposes 24 tools covering multi-device management, transport fallback (API → API-SSL → SSH), read-heavy network inspection, and guarded write access — so AI assistants can manage RouterOS devices safely from a single conversation.
+An MCP server for [MikroTik RouterOS](https://mikrotik.com/software) with a lightweight web dashboard for multi-router management. Exposes 24 MCP tools covering transport fallback (API → API-SSL → SSH), read-heavy network inspection, and guarded write access, while the bundled dashboard provides a simple REST-backed UI for viewing routers and common network state.
 
 ## Quick start
 
@@ -22,8 +22,11 @@ uv sync
 # Configure devices
 cp devices.yaml.example devices.yaml   # then edit with your router details
 
-# Run the server
+# Run the MCP server
 uv run python -m mikrotik_routeros_mcp.server
+
+# Or run the web dashboard
+uv run python -m mikrotik_routeros_mcp.dashboard --host 0.0.0.0 --port 8080
 ```
 
 The server looks for config in this order: `MIKROTIK_ROUTEROS_CONFIG` env var → `./devices.yaml` → `./devices.yml` → `./devices.json`.

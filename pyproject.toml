@@ -1,7 +1,7 @@
 [project]
 name = "mikrotik-routeros-mcp"
 version = "0.1.0"
-description = "Public MCP server for managing multiple MikroTik RouterOS devices with transport fallback and guarded write workflows."
+description = "Public MCP server and lightweight web dashboard for managing multiple MikroTik RouterOS devices with transport fallback and guarded write workflows."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
