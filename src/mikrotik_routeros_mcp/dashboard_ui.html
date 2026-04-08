@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MikroTik RouterOS Dashboard</title>
+<style>
+:root {
+  --bg: #0f1419;
+  --bg2: #1a1f2e;
+  --bg3: #242938;
+  --border: #2d3348;
+  --text: #c9d1d9;
+  --text2: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --red: #f85149;
+  --orange: #d29922;
+  --radius: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+/* Sidebar */
+#sidebar { width: 260px; min-width: 260px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+#sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+#sidebar-header h1 { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: 0.5px; }
+#sidebar-header p { font-size: 11px; color: var(--text2); margin-top: 4px; }
+#device-list { flex: 1; overflow-y: auto; padding: 8px; }
+.device-item { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 10px; margin-bottom: 2px; transition: background 0.15s; }
+.device-item:hover { background: var(--bg3); }
+.device-item.active { background: var(--bg3); border-left: 3px solid var(--accent); }
+.device-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.device-dot.unknown { background: var(--text2); }
+.device-dot.online { background: var(--green); }
+.device-dot.offline { background: var(--red); }
+.device-name { font-size: 13px; font-weight: 500; }
+.device-host { font-size: 11px; color: var(--text2); }
+#sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+#btn-add-device { width: 100%; padding: 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--accent); cursor: pointer; font-size: 12px; }
+#btn-add-device:hover { background: var(--border); }
+
+/* Main area */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#topbar { padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--bg2); }
+#topbar-title { font-size: 16px; font-weight: 600; }
+#topbar-actions { display: flex; gap: 8px; }
+.btn { padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg3); color: var(--text); cursor: pointer; font-size: 12px; }
+.btn:hover { background: var(--border); }
+.btn-danger { border-color: var(--red); color: var(--red); }
+.btn-danger:hover { background: rgba(248,81,73,0.15); }
+
+/* Tabs */
+#tabs { display: flex; gap: 0; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; }
+.tab { padding: 10px 16px; font-size: 12px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Content */
+#content { flex: 1; overflow-y: auto; padding: 20px; }
+#empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text2); font-size: 14px; }
+.loading { text-align: center; padding: 40px; color: var(--text2); }
+
+/* Data table */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th { text-align: left; padding: 8px 12px; color: var(--text2); font-weight: 500; border-bottom: 1px solid var(--border); background: var(--bg2); position: sticky; top: 0; }
+.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); word-break: break-all; max-width: 300px; }
+.data-table tr:hover td { background: var(--bg2); }
+
+/* System info cards */
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.info-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.info-card .label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.info-card .value { font-size: 18px; font-weight: 600; margin-top: 4px; }
+
+/* Badge */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.badge-green { background: rgba(63,185,80,0.15); color: var(--green); }
+.badge-red { background: rgba(248,81,73,0.15); color: var(--red); }
+.badge-orange { background: rgba(210,153,34,0.15); color: var(--orange); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 24px; width: 420px; max-width: 90vw; }
+.modal h2 { font-size: 16px; margin-bottom: 16px; }
+.modal label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; margin-top: 12px; }
+.modal input, .modal select { width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 13px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>MIKROTIK DASHBOARD</h1>
+    <p id="device-count">Loading...</p>
+  </div>
+  <div id="device-list"></div>
+  <div id="sidebar-footer">
+    <button id="btn-add-device" onclick="showAddModal()">+ Add Router</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <span id="topbar-title">Select a router</span>
+    <div id="topbar-actions">
+      <button class="btn" onclick="refreshCurrent()">Refresh</button>
+      <button class="btn btn-danger" id="btn-remove" style="display:none" onclick="removeDevice()">Remove</button>
+    </div>
+  </div>
+  <div id="tabs"></div>
+  <div id="content">
+    <div id="empty-state">Select a router from the sidebar to get started.</div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let devices = [];
+let selected = null;
+let activeTab = 'system';
+let statusCache = {};
+
+const TABS = [
+  { id: 'system',      label: 'System' },
+  { id: 'interfaces',  label: 'Interfaces' },
+  { id: 'addresses',   label: 'IP Addresses' },
+  { id: 'dhcp-leases', label: 'DHCP Leases' },
+  { id: 'firewall',    label: 'Firewall' },
+  { id: 'nat',         label: 'NAT' },
+  { id: 'routes',      label: 'Routes' },
+  { id: 'dns',         label: 'DNS' },
+  { id: 'neighbors',   label: 'Neighbors' },
+  { id: 'logs',        label: 'Logs' },
+];
+
+// ---------- API helpers ----------
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+// ---------- Device list ----------
+async function loadDevices() {
+  try {
+    devices = await api('/api/devices');
+    renderDeviceList();
+    document.getElementById('device-count').textContent = devices.length + ' router(s) configured';
+    // Check status for each device in background
+    devices.forEach(d => checkStatus(d.name));
+  } catch (e) {
+    document.getElementById('device-count').textContent = 'Error loading devices';
+  }
+}
+
+async function checkStatus(name) {
+  try {
+    await api(`/api/devices/${name}/status`);
+    statusCache[name] = 'online';
+  } catch {
+    statusCache[name] = 'offline';
+  }
+  renderDeviceList();
+}
+
+function renderDeviceList() {
+  const el = document.getElementById('device-list');
+  el.innerHTML = devices.map(d => {
+    const st = statusCache[d.name] || 'unknown';
+    const cls = d.name === selected ? 'device-item active' : 'device-item';
+    return `<div class="${cls}" onclick="selectDevice('${d.name}')">
+      <span class="device-dot ${st}"></span>
+      <div>
+        <div class="device-name">${esc(d.name)}</div>
+        <div class="device-host">${esc(d.host)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---------- Device selection ----------
+function selectDevice(name) {
+  selected = name;
+  activeTab = 'system';
+  document.getElementById('topbar-title').textContent = name;
+  document.getElementById('btn-remove').style.display = '';
+  renderTabs();
+  renderDeviceList();
+  loadTab();
+}
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = TABS.map(t =>
+    `<div class="tab ${t.id === activeTab ? 'active' : ''}" onclick="switchTab('${t.id}')">${t.label}</div>`
+  ).join('');
+}
+
+function switchTab(id) {
+  activeTab = id;
+  renderTabs();
+  loadTab();
+}
+
+// ---------- Tab content ----------
+async function loadTab() {
+  if (!selected) return;
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Loading...</div>';
+  try {
+    if (activeTab === 'system') {
+      await loadSystem();
+    } else {
+      const data = await api(`/api/devices/${selected}/${activeTab}`);
+      renderTable(data);
+    }
+  } catch (e) {
+    content.innerHTML = `<div class="loading" style="color:var(--red)">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+async function loadSystem() {
+  const data = await api(`/api/devices/${selected}/system`);
+  const result = data.result || {};
+  const items = result.items || result.raw;
+  const content = document.getElementById('content');
+
+  if (Array.isArray(items) && items.length > 0) {
+    const info = items[0];
+    const cards = [
+      { label: 'Board', value: info['board-name'] || '-' },
+      { label: 'Version', value: info['version'] || '-' },
+      { label: 'Uptime', value: info['uptime'] || '-' },
+      { label: 'CPU', value: (info['cpu'] || info['cpu-count'] || '-') },
+      { label: 'CPU Load', value: info['cpu-load'] ? info['cpu-load'] + '%' : '-' },
+      { label: 'Memory Used', value: formatBytes(info['total-memory'] - info['free-memory']) },
+      { label: 'Memory Free', value: formatBytes(info['free-memory']) },
+      { label: 'HDD Free', value: formatBytes(info['free-hdd-space']) },
+      { label: 'Architecture', value: info['architecture-name'] || '-' },
+    ];
+    content.innerHTML = `<div class="info-grid">${cards.map(c =>
+      `<div class="info-card"><div class="label">${c.label}</div><div class="value">${esc(String(c.value))}</div></div>`
+    ).join('')}</div>`;
+  } else if (typeof items === 'string') {
+    content.innerHTML = `<pre style="white-space:pre-wrap;font-size:12px;color:var(--text2)">${esc(items)}</pre>`;
+  } else {
+    content.innerHTML = '<div class="loading">No system data returned</div>';
+  }
+}
+
+function renderTable(data) {
+  const content = document.getElementById('content');
+  const result = data.result || {};
+  let items = result.items;
+
+  // SSH raw output fallback
+  if (!items && result.raw) {
+    content.innerHTML = `<pre style="white-space:pre-wrap;font-size:12px;color:var(--text2)">${esc(result.raw)}</pre>`;
+    return;
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    content.innerHTML = '<div class="loading">No data</div>';
+    return;
+  }
+
+  // Collect all keys
+  const keys = [...new Set(items.flatMap(Object.keys))].filter(k => k !== '.id');
+
+  let html = '<table class="data-table"><thead><tr>';
+  keys.forEach(k => html += `<th>${esc(k)}</th>`);
+  html += '</tr></thead><tbody>';
+  items.forEach(row => {
+    html += '<tr>';
+    keys.forEach(k => {
+      let v = row[k] ?? '';
+      // Colorize some values
+      if (v === 'true') v = '<span class="badge badge-green">true</span>';
+      else if (v === 'false') v = '<span class="badge badge-red">false</span>';
+      else if (k === 'disabled' && v === 'false') v = '<span class="badge badge-green">enabled</span>';
+      else if (k === 'running' && v === 'true') v = '<span class="badge badge-green">running</span>';
+      else v = esc(String(v));
+      html += `<td>${v}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  content.innerHTML = html;
+}
+
+// ---------- Add device ----------
+function showAddModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h2>Add Router</h2>
+    <label>Name *</label><input id="m-name" placeholder="e.g. office">
+    <label>Host *</label><input id="m-host" placeholder="192.168.88.1">
+    <label>Username *</label><input id="m-user" value="admin">
+    <label>Password</label><input id="m-pass" type="password">
+    <label>SSH Port</label><input id="m-ssh" type="number" value="22">
+    <label>API Port</label><input id="m-api" type="number" value="8728">
+    <label>Allow Writes</label>
+    <select id="m-writes"><option value="false" selected>No</option><option value="true">Yes</option></select>
+    <div class="modal-actions">
+      <button class="btn" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn" style="background:var(--accent);color:#000;border-color:var(--accent)" onclick="doAddDevice(this)">Add</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function doAddDevice(btn) {
+  const data = {
+    name: document.getElementById('m-name').value.trim(),
+    host: document.getElementById('m-host').value.trim(),
+    username: document.getElementById('m-user').value.trim(),
+    password: document.getElementById('m-pass').value || null,
+    ssh_port: parseInt(document.getElementById('m-ssh').value) || 22,
+    api_port: parseInt(document.getElementById('m-api').value) || 8728,
+    allow_writes: document.getElementById('m-writes').value === 'true',
+  };
+  if (!data.name || !data.host || !data.username) {
+    alert('Name, host, and username are required.');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+  try {
+    await api('/api/devices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    document.querySelector('.modal-overlay').remove();
+    await loadDevices();
+  } catch (e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Add';
+  }
+}
+
+// ---------- Remove device ----------
+async function removeDevice() {
+  if (!selected) return;
+  if (!confirm(`Remove router "${selected}" from configuration?`)) return;
+  try {
+    await api(`/api/devices/${selected}`, { method: 'DELETE' });
+    selected = null;
+    document.getElementById('topbar-title').textContent = 'Select a router';
+    document.getElementById('btn-remove').style.display = 'none';
+    document.getElementById('tabs').innerHTML = '';
+    document.getElementById('content').innerHTML = '<div id="empty-state">Select a router from the sidebar to get started.</div>';
+    await loadDevices();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ---------- Refresh ----------
+function refreshCurrent() {
+  if (selected) {
+    statusCache[selected] = 'unknown';
+    checkStatus(selected);
+    loadTab();
+  } else {
+    loadDevices();
+  }
+}
+
+// ---------- Utils ----------
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function formatBytes(b) {
+  b = Number(b);
+  if (!b || isNaN(b)) return '-';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(1) + ' GB';
+}
+
+// ---------- Init ----------
+loadDevices();
+</script>
+</body>
+</html>

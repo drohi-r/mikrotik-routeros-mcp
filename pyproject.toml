@@ -17,9 +17,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mikrotik_routeros_mcp"]
+artifacts = ["src/mikrotik_routeros_mcp/*.html"]
 
 [project.scripts]
 mikrotik-routeros-mcp = "mikrotik_routeros_mcp.server:main"
+mikrotik-dashboard = "mikrotik_routeros_mcp.dashboard:main"
 
 [dependency-groups]
 dev = [
