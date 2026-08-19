@@ -48,6 +48,18 @@ class SshTransport(BaseTransport):
         finally:
             client.close()
 
+    def open_console(self) -> Any:
+        client = self._client()
+        try:
+            channel = client.invoke_shell(term="dumb", width=511)
+        except Exception as exc:
+            client.close()
+            raise TransportError(f"ssh console allocation failed for {self.device.name}: {exc}") from exc
+        # keep the SSHClient alive for the channel's lifetime; RouterOS reverts
+        # Safe Mode changes if this transport-level connection drops
+        channel._mcp_ssh_client = client
+        return channel
+
     def ping(self) -> dict[str, Any]:
         result = self._run_command(":put \"mcp-ok\"")
         return {"reachable": result["exit_status"] == 0, "transport": self.name, "stdout": result["stdout"].strip()}

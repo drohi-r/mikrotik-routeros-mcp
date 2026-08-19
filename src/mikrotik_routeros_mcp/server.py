@@ -10,6 +10,7 @@ from .client import RouterOsFleetClient
 from .config import DEFAULT_CONFIG_CANDIDATES, load_config
 from .safety import plan_script_change as build_script_plan
 from .safety import verify_approval_code
+from .snapshots import SnapshotStore
 
 
 def _json(payload: Any) -> str:
@@ -237,12 +238,15 @@ def plan_script_change(device: str, script: str, reason: str) -> str:
 
 @mcp.tool()
 def apply_script_change(device: str, script: str, reason: str, approval_code: str) -> str:
+    """Apply a change inside a RouterOS Safe Mode session: the config is snapshotted
+    first, and the router itself reverts the change if the session drops or the
+    post-apply health check fails."""
     device_config = _client().get_device(device)
     plan = build_script_plan(device_config, script, reason)
     if plan.blocked:
         raise ValueError(plan.summary)
     verify_approval_code(device, script, reason, approval_code)
-    response = _client().run_script(device, script)
+    response = _client().safe_apply_script(device, script)
     return _json(
         {
             "device": device,
@@ -251,6 +255,31 @@ def apply_script_change(device: str, script: str, reason: str, approval_code: st
             "response": response,
         }
     )
+
+
+@mcp.tool()
+def list_snapshots(device: str) -> str:
+    """List config snapshots taken before Safe Mode writes, newest first."""
+    store = SnapshotStore()
+    return _json(
+        [
+            {
+                "id": info.id,
+                "created": info.created,
+                "size_bytes": info.size_bytes,
+                "path": str(info.path),
+            }
+            for info in store.list_snapshots(device)
+        ]
+    )
+
+
+@mcp.tool()
+def diff_snapshots(device: str, old_id: str, new_id: str) -> str:
+    """Unified diff between two config snapshots of a device."""
+    store = SnapshotStore()
+    diff = store.diff(device, old_id, new_id)
+    return _json({"device": device, "old_id": old_id, "new_id": new_id, "diff": diff or "(no differences)"})
 
 
 def main() -> None:

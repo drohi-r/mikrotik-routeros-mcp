@@ -8,10 +8,10 @@
   <a href="https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml"><img src="https://github.com/drohi-r/mikrotik-routeros-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/drohi-r/mikrotik-routeros-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Python-3.12%2B-blue?style=for-the-badge" alt="Python 3.12+">
-  <img src="https://img.shields.io/badge/MCP_Tools-24-2196F3?style=for-the-badge" alt="24 MCP Tools">
+  <img src="https://img.shields.io/badge/MCP_Tools-26-2196F3?style=for-the-badge" alt="26 MCP Tools">
 </p>
 
-An MCP server for [MikroTik RouterOS](https://mikrotik.com/software) with a lightweight web dashboard for multi-router management. Exposes 24 MCP tools covering transport fallback (API → API-SSL → SSH), read-heavy network inspection, and guarded write access, while the bundled dashboard provides a simple REST-backed UI for viewing routers and common network state.
+An MCP server for [MikroTik RouterOS](https://mikrotik.com/software) with a lightweight web dashboard for multi-router management. Exposes 26 MCP tools covering transport fallback (API → API-SSL → SSH), read-heavy network inspection, and guarded write access, while the bundled dashboard provides a simple REST-backed UI for viewing routers and common network state.
 
 ## Quick start
 
@@ -35,12 +35,12 @@ The server looks for config in this order: `MIKROTIK_ROUTEROS_CONFIG` env var �
 
 ```mermaid
 graph TD
-    A["MikroTik RouterOS MCP Server<br/><code>mikrotik_routeros_mcp</code><br/>24 tools · safety gate"] --> B
+    A["MikroTik RouterOS MCP Server<br/><code>mikrotik_routeros_mcp</code><br/>26 tools · safe-mode writes"] --> B
     B["Transport Layer<br/>Fallback: API → API-SSL → SSH"] --> C
     C["RouterOS Devices<br/>Named targets from devices.yaml"]
 
     D["Multi-Device Config<br/>Named routers · tags · per-device write control"] -.-> A
-    E["Guarded Write Flow<br/>plan_script_change → apply_script_change"] -.-> A
+    E["Safe-Mode Write Engine<br/>snapshot → apply → health check → commit/revert"] -.-> A
     F["SSH Fallback<br/>Config export · limited-API environments"] -.-> B
 
     style A fill:#1a1a2e,stroke:#2196F3,color:#fff
@@ -123,9 +123,22 @@ devices:
 | Tool | What it does |
 |------|-------------|
 | `plan_script_change` | Preview a RouterOS script change with risk assessment |
-| `apply_script_change` | Apply a planned script change with approval code |
+| `apply_script_change` | Apply a planned change inside a Safe Mode session with snapshot and auto-rollback |
+| `list_snapshots` | List config snapshots taken before writes, newest first |
+| `diff_snapshots` | Unified diff between two config snapshots of a device |
 
 Write access is blocked unless the target device has `allow_writes: true`. The intended workflow is: `plan_script_change` → inspect risk level and approval code → `apply_script_change` only if the plan is acceptable.
+
+### Safe Mode writes
+
+Every `apply_script_change` runs a lockout-proof pipeline — there is no unprotected write path:
+
+1. **Snapshot** — the full config is exported to `~/.mikrotik-mcp/snapshots/<device>/<timestamp>.rsc` before anything is sent.
+2. **Safe Mode** — the change is applied inside a RouterOS [Safe Mode](https://help.mikrotik.com/docs/display/ROS/Console#Console-SafeMode) console session over a persistent SSH PTY. Safe Mode is console-only (neither the binary API nor REST expose it), which is why this engine drives a real terminal.
+3. **Health check** — after applying, the router must still answer over a *separate* SSH connection.
+4. **Commit or revert** — healthy: Safe Mode is released and the change is kept. Unhealthy, timed out, or the session drops (including because the change itself cut our connectivity): **the router reverts the change itself**. That is RouterOS's own rollback mechanism, not a best-effort undo script.
+
+Devices without `ssh` in `transport_order` fail closed — writes are refused rather than applied unprotected. The health check is deliberately minimal (management path answers); it catches lockouts, not subtle misconfiguration — review `diff_snapshots` output after any change that matters.
 
 ## Claude Desktop
 

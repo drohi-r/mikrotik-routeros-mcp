@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from .models import AppConfig, DeviceConfig
+from .safemode import SafeModeSession, safe_apply
+from .snapshots import SnapshotStore
 from .transports.api import ApiTransport
 from .transports.base import BaseTransport, TransportError
 from .transports.ssh import SshTransport
@@ -112,6 +114,43 @@ class RouterOsFleetClient:
             f"All transports failed for device {device.name} during export_config: "
             + "; ".join(f"{item['transport']}: {item['error']}" for item in errors)
         )
+
+    def safe_apply_script(
+        self,
+        device_name: str,
+        script: str,
+        snapshot_store: SnapshotStore | None = None,
+    ) -> dict[str, Any]:
+        device = self.get_device(device_name)
+        if "ssh" not in device.transport_order:
+            raise RuntimeError(
+                f"Device {device.name} has no ssh transport configured; Safe Mode writes require an "
+                "SSH console session and there is no unprotected fallback."
+            )
+        store = snapshot_store or SnapshotStore()
+        ssh = SshTransport(device)
+
+        def take_snapshot() -> str:
+            export = ssh.export_config(hide_sensitive=False)
+            return store.save(device.name, export["raw"]).id
+
+        def check_health() -> bool:
+            return bool(ssh.ping().get("reachable"))
+
+        session = SafeModeSession(ssh.open_console(), timeout_seconds=device.timeout_seconds * 3)
+        result = safe_apply(
+            session=session,
+            script=script,
+            take_snapshot=take_snapshot,
+            check_health=check_health,
+        )
+        return {
+            "device": device.name,
+            "transport": "ssh-safemode",
+            "operation": "safe_apply_script",
+            "result": result,
+            "errors": [],
+        }
 
     def run_script(self, device_name: str, script: str) -> dict[str, Any]:
         device = self.get_device(device_name)
