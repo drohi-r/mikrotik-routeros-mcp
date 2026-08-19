@@ -4,8 +4,13 @@ import time
 from typing import Any, Callable, Protocol
 
 CTRL_X = b"\x18"
-SAFE_MODE_TAKEN = "[Safe Mode taken]"
-SAFE_MODE_RELEASED = "[Safe Mode released]"
+# RouterOS v7 console: prompt gains "<SAFE> " once safe mode is taken, and the
+# release path prints "Safe Mode released". Login must use the "+ct" console
+# options or RouterOS blocks on terminal-capability negotiation.
+SAFE_PROMPT_MARKER = "<SAFE> "
+# the trailing "Safe Mode released" line can arrive after a pause (and after the
+# prompt), so the immediate release acknowledgement is the reliable marker
+SAFE_MODE_RELEASED = "Releasing Safe Mode... Success!"
 _PROMPT_ENDINGS = ("> ", "<SAFE> ")
 
 
@@ -66,7 +71,7 @@ class SafeModeSession:
     def enter(self) -> None:
         self._drain()
         self.channel.send(CTRL_X)
-        self._read_until(SAFE_MODE_TAKEN, failure_description="Router did not enter Safe Mode")
+        self._read_until(SAFE_PROMPT_MARKER, failure_description="Router did not enter Safe Mode")
         self.in_safe_mode = True
 
     def run(self, command: str) -> str:
@@ -74,7 +79,7 @@ class SafeModeSession:
             raise SafeModeError("Session is not in Safe Mode; call enter() before run().")
         self._drain()
         self.channel.send(command.encode("utf-8") + b"\r")
-        return self._read_until("<SAFE> ", failure_description=f"No prompt after command '{command}'")
+        return self._read_until(SAFE_PROMPT_MARKER, failure_description=f"No prompt after command '{command}'")
 
     def commit(self) -> None:
         if not self.in_safe_mode:

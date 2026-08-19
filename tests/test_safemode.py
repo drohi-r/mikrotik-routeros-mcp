@@ -17,9 +17,9 @@ class FakeChannel:
         self.closed = False
         self._pending = ""
         self.responses: dict[bytes, str] = {
-            CTRL_X: "\r\n[Safe Mode taken]\r\n" + SAFE_PROMPT,
+            CTRL_X: "\r\nTaking Safe Mode session... Success!\r\n" + SAFE_PROMPT,
         }
-        self.release_response = "\r\n[Safe Mode released]\r\n" + PROMPT
+        self.release_response = "\r\nReleasing Safe Mode... Success!\r\n" + PROMPT + "\rSafe Mode released\r\n" + PROMPT
 
     def settimeout(self, timeout: float) -> None:
         self.timeout = timeout
@@ -58,7 +58,7 @@ class SafeModeSessionTests(unittest.TestCase):
         self.assertTrue(self.session.in_safe_mode)
 
     def test_enter_raises_when_safe_mode_not_taken(self) -> None:
-        self.channel.responses[CTRL_X] = "\r\n" + PROMPT  # router refuses safe mode
+        self.channel.responses[CTRL_X] = "\r\nTaking Safe Mode session... Failure!\r\n" + PROMPT  # refused
 
         with self.assertRaises(SafeModeError):
             self.session.enter()
@@ -89,6 +89,17 @@ class SafeModeSessionTests(unittest.TestCase):
 
         with self.assertRaises(SafeModeError):
             self.session.commit()
+
+    def test_commit_confirms_release_even_when_prompt_precedes_banner(self) -> None:
+        # live RouterOS v7 emits: "Releasing Safe Mode... Success!" -> prompt ->
+        # (pause) -> "Safe Mode released"; the pause must not fail the commit
+        self.session.enter()
+        self.channel.release_response = "\r\nReleasing Safe Mode... Success!\r\n" + PROMPT
+
+        self.session.commit()
+
+        self.assertFalse(self.session.in_safe_mode)
+        self.assertTrue(self.channel.closed)
 
     def test_abandon_closes_channel_without_second_ctrl_x(self) -> None:
         self.session.enter()

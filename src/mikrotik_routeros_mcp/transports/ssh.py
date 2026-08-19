@@ -49,7 +49,15 @@ class SshTransport(BaseTransport):
             client.close()
 
     def open_console(self) -> Any:
-        client = self._client()
+        # "+ct511w" console login options: no colors, no terminal-capability
+        # negotiation (which otherwise blocks a non-answering PTY), width 511
+        original_username = self.device.username
+        if "+" not in original_username:
+            self.device.username = f"{original_username}+ct511w"
+        try:
+            client = self._client()
+        finally:
+            self.device.username = original_username
         try:
             channel = client.invoke_shell(term="dumb", width=511)
         except Exception as exc:
